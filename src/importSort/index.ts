@@ -119,10 +119,10 @@ function importsort(textEditor: vscode.TextEditor, _: vscode.TextEditorEdit) {
     });
 
     // 检查是否已经正确排序
-    if (isAlreadySorted(imports)) {
-      vscode.window.showInformationMessage("导入已经正确排序！");
-      return;
-    }
+    // if (isAlreadySorted(imports)) {
+    //   vscode.window.showInformationMessage("导入已经正确排序！");
+    //   return;
+    // }
 
     // 3. 分类和排序
     const deps: typeof imports = [];
