@@ -67,6 +67,7 @@ function importsort(textEditor: vscode.TextEditor, _: vscode.TextEditorEdit) {
     const imports: { importLine: string; comment?: string; docComment?: string }[] = [];
     let currentComment: string | undefined;
     let currentDocComment: string | undefined;
+    let currentImport = '';
 
     lines.forEach(line => {
       const trimmedLine = line.trim();
@@ -80,41 +81,58 @@ function importsort(textEditor: vscode.TextEditor, _: vscode.TextEditorEdit) {
         currentDocComment += '\n' + line;
       } else if (trimmedLine.startsWith('//')) {
         currentComment = line;
-      } else if (trimmedLine.startsWith('import')) {
-        // 检查这一行是否包含行内注释
-        const [importPart, ...commentParts] = line.split('//');
-        const inlineComment = commentParts.length ? '//' + commentParts.join('//') : '';
-
-        // 处理import语句
-        const processedImport = importPart.replace(/{\s*([^}]+)\s*}/g, (_, content) => {
-          const items = content
-            .split(',')
-            .map(item => item.trim())
-            .filter(Boolean)
-            .join(', ');
-          return `{ ${items} }`;
-        }).trim();
-
-        // 如果有行内注释，使用行内注释
-        if (inlineComment) {
-          imports.push({
-            importLine: processedImport + '  ' + inlineComment,
-            docComment: currentDocComment
-          });
-        } else if (currentComment) {
-          // 如果有独立的行注释，添加到import语句后面
-          imports.push({
-            importLine: processedImport + '  ' + currentComment.trim(),
-            docComment: currentDocComment
-          });
+      } else if (trimmedLine.startsWith('import') || currentImport) {
+        // 如果是新的import语句或者正在处理多行import
+        if (currentImport) {
+          currentImport += ' ' + trimmedLine;
         } else {
-          imports.push({
-            importLine: processedImport,
-            docComment: currentDocComment
-          });
+          currentImport = trimmedLine;
         }
-        currentComment = undefined;
-        currentDocComment = undefined;
+
+        // 检查是否是完整的import语句
+        if (trimmedLine.includes(';')) {
+          // 处理多行import，将其合并为一行
+          const processedImport = currentImport
+            .replace(/\s+/g, ' ')  // 将多个空白字符替换为单个空格
+            .replace(/{\s*([^}]+)\s*}/g, (_, content) => {
+              const items = content
+                .split(',')
+                .map(item => item.trim())
+                .filter(Boolean)
+                .sort()  // 对大括号内的导入项进行排序
+                .join(', ');
+              return `{ ${items} }`;
+            })
+            .trim();
+
+          // 检查这一行是否包含行内注释
+          const [importPart, ...commentParts] = processedImport.split('//');
+          const inlineComment = commentParts.length ? '//' + commentParts.join('//') : '';
+
+          // 如果有行内注释，使用行内注释
+          if (inlineComment) {
+            imports.push({
+              importLine: importPart.trim() + '  ' + inlineComment,
+              docComment: currentDocComment
+            });
+          } else if (currentComment) {
+            // 如果有独立的行注释，添加到import语句后面
+            imports.push({
+              importLine: importPart.trim() + '  ' + currentComment.trim(),
+              docComment: currentDocComment
+            });
+          } else {
+            imports.push({
+              importLine: importPart.trim(),
+              docComment: currentDocComment
+            });
+          }
+
+          // 重置状态
+          currentImport = '';
+          currentComment = undefined;
+          currentDocComment = undefined;
+        }
       }
     });
 
