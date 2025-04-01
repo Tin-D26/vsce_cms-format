@@ -5,7 +5,7 @@ function getVisualLength(str: string): number {
   let length = 0;
   for (let i = 0; i < str.length; i++) {
     const code = str.charCodeAt(i);
-    // 中文和全角字符的宽度计为2
+    // 中文和全角字符的宽度计为2 
     if (code > 127 || code === 94) {
       length += 2;
     } else {
